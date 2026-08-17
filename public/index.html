@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Name-to-Number Assignment</title>
+  <meta name="description"
+    content="Automatic name-to-number random ticket generator powered by Neon PostgreSQL cloud DB.">
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <div class="app-container">
+    <main>
+
+      <!-- View 1: Entry & Pass Card Generator (Access via '/') -->
+      <section id="viewAssign" class="view-section active">
+        <div class="glass-card centered-card">
+          <h2 class="card-title">Assign Random Ticket</h2>
+
+          <form id="assignForm">
+            <div class="form-group">
+              <label class="form-label" for="userName">Full Name or Participant Name</label>
+              <input type="text" id="userName" class="input-field" placeholder="e.g. Goutham Sankar" required
+                autocomplete="off">
+            </div>
+
+            <input type="hidden" id="prefixSelect" value="TKT">
+            <input type="hidden" id="digitsSelect" value="4">
+
+            <button type="submit" class="btn btn-neon" id="assignBtn">
+              <span>Generate & Assign Number</span>
+            </button>
+          </form>
+
+          <!-- Live Generated Badge Display Card -->
+          <div class="ticket-badge-card" id="latestBadge" style="display: none;">
+            <div class="badge-tag" id="badgeTag">DIGITAL PASS ASSIGNED</div>
+            <div class="badge-name" id="badgeName">Goutham Sankar</div>
+            <div class="badge-number" id="badgeNumber">TKT-4892</div>
+            <div class="badge-group" id="badgeGroup">Assigned: Group 1</div>
+            <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: center;">
+              <button class="btn btn-outline btn-sm" id="copyBadgeBtn">Copy Code</button>
+              <button class="btn btn-outline btn-sm" id="printBadgeBtn">Print Badge</button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- View 2: Registry Page (Access via '/nigganatortrump') -->
+      <section id="viewRegistry" class="view-section" style="display: none;">
+        <div class="glass-card">
+          <div class="table-header-bar">
+            <h2 class="card-title" style="margin-bottom: 0;">
+              Assigned Registry
+            </h2>
+
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <!-- Total Groups Count Setting -->
+              <div class="group-config-box">
+                <label for="groupSizeInput" style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500;">Total Groups:</label>
+                <input type="number" id="groupSizeInput" class="input-field" value="15" min="1" max="100"
+                  style="width: 50px; padding: 4px 6px; text-align: center;">
+                <button class="btn btn-outline btn-sm" id="saveGroupSizeBtn">Save</button>
+              </div>
+
+              <!-- Group Filter Dropdown -->
+              <select id="groupFilterSelect" class="input-field" style="width: auto; font-size: 0.82rem; padding: 0.4rem 0.6rem;">
+                <option value="ALL">All Groups</option>
+              </select>
+
+              <!-- Group Sort Dropdown -->
+              <select id="groupSortSelect" class="input-field" style="width: auto; font-size: 0.82rem; padding: 0.4rem 0.6rem;">
+                <option value="NEWEST">Newest First</option>
+                <option value="OLDEST">Oldest First</option>
+                <option value="GROUP_ASC">Group (A-Z)</option>
+                <option value="GROUP_DESC">Group (Z-A)</option>
+                <option value="NAME_ASC">Name (A-Z)</option>
+              </select>
+
+              <input type="text" id="searchInput" class="input-field search-input"
+                placeholder="Search...">
+              <button class="btn btn-outline btn-sm" id="exportCsvBtn" title="Export CSV">Export CSV</button>
+              <button class="btn btn-danger btn-sm" id="clearAllBtn" title="Clear All">Clear All</button>
+            </div>
+          </div>
+
+          <div class="ticket-table-wrapper">
+            <table class="ticket-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Name</th>
+                  <th>Assigned Ticket Code</th>
+                  <th>Group</th>
+                  <th>Assigned Time</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="ticketTableBody">
+                <!-- Dynamically populated rows -->
+              </tbody>
+            </table>
+
+            <div class="empty-state" id="emptyState">
+              <div class="empty-icon">#</div>
+              <p>No assigned tickets yet.</p>
+              <small style="color: var(--text-muted);">Assigned tickets will appear in this registry.</small>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- View 3: Task Assignee Picker Page (Access via '/fernandoalonsogoat') -->
+      <section id="viewRandomPicker" class="view-section" style="display: none;">
+        <div class="glass-card centered-card" style="text-align: center;">
+          <h2 class="card-title" style="justify-content: center;">Random Task Assignee</h2>
+          <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+            Pick a random participant to be assigned the task!
+          </p>
+
+          <div class="picker-roulette-box" id="rouletteBox">
+            <div id="pickerStatusText" style="font-size: 0.9rem; color: var(--text-muted);">Ready to pick</div>
+            <div id="pickerWinnerName"
+              style="font-size: 1.8rem; font-weight: 800; margin: 10px 0; color: var(--mono-black);">—</div>
+            <div id="pickerWinnerTicket"
+              style="font-size: 1.2rem; font-family: monospace; font-weight: 700; display: none;"
+              class="ticket-code-pill">—</div>
+          </div>
+
+          <button class="btn btn-neon" id="pickRandomBtn" style="margin-top: 1.5rem;">
+            Pick Task Assignee
+          </button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Hidden DB Status Elements for JS Compatibility -->
+  <div style="display: none;">
+    <button id="navAssignTab"></button>
+    <button id="navRegistryTab"></button>
+    <span id="navRegistryCount"></span>
+    <div id="dbStatusPill">
+      <div id="statusDot"></div><span id="statusText"></span>
+    </div>
+    <div id="dbModal">
+      <button id="closeModalBtn"></button>
+      <button id="switchToMemoryBtn"></button>
+      <form id="dbConfigForm"><input id="dbUrlInput"></form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
