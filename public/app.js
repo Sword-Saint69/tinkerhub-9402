@@ -256,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 5. Handle Submit Form (Assign Number & Random Group)
+  // 5. Handle Submit Form (Assign Number & Round-Robin Group)
   if (assignForm) {
     assignForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -281,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
           badgeName.textContent = data.ticket.name;
           badgeNumber.textContent = data.ticket.ticket_code;
           badgeTag.textContent = `TICKET ASSIGNED`;
-          if (badgeGroup) badgeGroup.textContent = `Random Group: ${data.ticket.group_name || 'Group 1'}`;
+          if (badgeGroup) badgeGroup.textContent = `Assigned: ${data.ticket.group_name || 'Group 1'}`;
           latestBadge.style.display = 'block';
 
           if (typeof confetti === 'function') {

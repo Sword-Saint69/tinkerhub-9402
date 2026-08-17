@@ -54,11 +54,11 @@ function generateRandomTicketCode(prefix = 'TKT', digits = 4) {
   return `${prefix}-${randomNumber}`;
 }
 
-// Randomly assign participant to one of the available N groups
-function getRandomGroup(totalGroups) {
-  const maxGroup = Math.max(parseInt(totalGroups, 10) || 15, 1);
-  const randomGroupNum = Math.floor(Math.random() * maxGroup) + 1;
-  return `Group ${randomGroupNum}`;
+// Calculate Round-Robin Group Assignment based on current total registered count
+function getRoundRobinGroup(totalCount, totalGroups) {
+  const numGroups = Math.max(parseInt(totalGroups, 10) || 15, 1);
+  const groupIndex = (totalCount % numGroups) + 1;
+  return `Group ${groupIndex}`;
 }
 
 // GET Group Config
@@ -72,7 +72,7 @@ app.post('/api/config/group', (req, res) => {
   const numGroups = parseInt(totalGroups, 10);
   if (numGroups && numGroups > 0) {
     groupConfig.totalGroups = numGroups;
-    return res.json({ success: true, totalGroups: groupConfig.totalGroups, message: `Random allocation configured across ${numGroups} total groups.` });
+    return res.json({ success: true, totalGroups: groupConfig.totalGroups, message: `Round-robin allocation configured across ${numGroups} total groups.` });
   }
   return res.status(400).json({ success: false, message: 'Invalid total groups number' });
 });
@@ -110,7 +110,7 @@ app.get('/api/tickets', async (req, res) => {
   return res.json({ success: true, mode: 'in-memory', tickets: inMemoryTickets, totalGroups: groupConfig.totalGroups });
 });
 
-// POST: Create ticket & randomly assign group
+// POST: Create ticket & assign Round-Robin group
 app.post('/api/tickets/create', async (req, res) => {
   const { name, prefix = 'TKT', digits = 4 } = req.body;
 
@@ -120,13 +120,16 @@ app.post('/api/tickets/create', async (req, res) => {
 
   const trimmedName = name.trim();
   const digitCount = Math.min(Math.max(parseInt(digits, 10) || 4, 4), 6);
-  const assignedGroup = getRandomGroup(groupConfig.totalGroups);
 
   if (dbConnectionString) {
     const sql = getNeonPool(dbConnectionString);
     if (sql) {
       try {
         await initDb(sql);
+        const countRes = await sql`SELECT COUNT(*) FROM tickets;`;
+        const totalCount = parseInt(countRes[0].count, 10);
+        const assignedGroup = getRoundRobinGroup(totalCount, groupConfig.totalGroups);
+
         let ticketCode = '';
         let inserted = false;
         let attempts = 0;
@@ -152,6 +155,9 @@ app.post('/api/tickets/create', async (req, res) => {
   }
 
   // Fallback / In-Memory insertion
+  const totalCount = inMemoryTickets.length;
+  const assignedGroup = getRoundRobinGroup(totalCount, groupConfig.totalGroups);
+
   let ticketCode = '';
   let unique = false;
   let attempts = 0;
