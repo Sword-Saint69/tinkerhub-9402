@@ -207,7 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
     })[match]);
   }
 
-  // 4. Random Task Assignee Picker Logic with 6-Second Dot Matrix 3x3 Loader
+  // 4. Random Task Assignee Picker Logic (Only show name/ticket AFTER 6 seconds)
   if (pickRandomBtn) {
     pickRandomBtn.addEventListener('click', () => {
       if (isSpinning) return;
@@ -219,39 +219,44 @@ document.addEventListener('DOMContentLoaded', () => {
       isSpinning = true;
       pickRandomBtn.disabled = true;
       pickerStatusText.textContent = 'Selecting assignee...';
+      
+      // Hide name and ticket while loading
+      pickerWinnerName.style.display = 'none';
       pickerWinnerTicket.style.display = 'none';
+      
+      // Show Dot Matrix Loader
       if (dotMatrixLoader) dotMatrixLoader.style.display = 'grid';
 
-      const durationMs = 6000; // Exact 6 seconds
-      const speedMs = 100;
-      const startTime = Date.now();
+      const durationMs = 6000; // 6 seconds
 
-      const interval = setInterval(() => {
-        const elapsedTime = Date.now() - startTime;
-
+      setTimeout(() => {
+        // Pre-select winner randomly
         const randomIndex = Math.floor(Math.random() * allTickets.length);
-        const candidate = allTickets[randomIndex];
-        pickerWinnerName.textContent = candidate.name;
-        pickerWinnerTicket.textContent = candidate.ticket_code;
+        const winner = allTickets[randomIndex];
 
-        if (elapsedTime >= durationMs) {
-          clearInterval(interval);
-          isSpinning = false;
-          pickRandomBtn.disabled = false;
-          pickerStatusText.textContent = 'TASK ASSIGNED TO';
-          pickerWinnerTicket.style.display = 'inline-block';
-          if (dotMatrixLoader) dotMatrixLoader.style.display = 'none';
+        // Hide loader
+        if (dotMatrixLoader) dotMatrixLoader.style.display = 'none';
 
-          if (typeof confetti === 'function') {
-            confetti({
-              particleCount: 80,
-              spread: 80,
-              origin: { y: 0.6 },
-              colors: ['#000000', '#71717a']
-            });
-          }
+        // Display winner details only now!
+        pickerWinnerName.textContent = winner.name;
+        pickerWinnerTicket.textContent = winner.ticket_code;
+        
+        pickerWinnerName.style.display = 'block';
+        pickerWinnerTicket.style.display = 'inline-block';
+        pickerStatusText.textContent = 'TASK ASSIGNED TO';
+
+        isSpinning = false;
+        pickRandomBtn.disabled = false;
+
+        if (typeof confetti === 'function') {
+          confetti({
+            particleCount: 80,
+            spread: 80,
+            origin: { y: 0.6 },
+            colors: ['#000000', '#71717a']
+          });
         }
-      }, speedMs);
+      }, durationMs);
     });
   }
 
