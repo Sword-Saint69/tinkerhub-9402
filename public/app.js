@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const pickerWinnerName = document.getElementById('pickerWinnerName');
   const pickerWinnerTicket = document.getElementById('pickerWinnerTicket');
   const pickerStatusText = document.getElementById('pickerStatusText');
+  const dotMatrixLoader = document.getElementById('dotMatrixLoader');
 
   let allTickets = [];
   let isSpinning = false;
@@ -146,7 +147,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectedGroupFilter = groupFilterSelect ? groupFilterSelect.value : 'ALL';
     const selectedSort = groupSortSelect ? groupSortSelect.value : 'NEWEST';
 
-    // 1. Filter by Search Query & Group
     let filtered = ticketsToRender.filter(t => {
       const matchesSearch = t.name.toLowerCase().includes(query) || 
                             t.ticket_code.toLowerCase().includes(query) ||
@@ -157,7 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return matchesSearch && matchesGroup;
     });
 
-    // 2. Apply Sorting
     filtered.sort((a, b) => {
       if (selectedSort === 'GROUP_ASC') {
         const groupNumA = parseInt((a.group_name || '').replace(/\D/g, ''), 10) || 0;
@@ -172,7 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (selectedSort === 'OLDEST') {
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       } else {
-        // NEWEST first (default)
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
     });
@@ -203,14 +201,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }).join('');
   }
 
-  // Helper escape HTML
   function escapeHtml(str) {
     return String(str).replace(/[&<>"']/g, match => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     })[match]);
   }
 
-  // 4. Random Task Assignee Picker Logic (/fernandoalonsogoat)
+  // 4. Random Task Assignee Picker Logic with 6-Second Dot Matrix 3x3 Loader
   if (pickRandomBtn) {
     pickRandomBtn.addEventListener('click', () => {
       if (isSpinning) return;
@@ -223,25 +220,27 @@ document.addEventListener('DOMContentLoaded', () => {
       pickRandomBtn.disabled = true;
       pickerStatusText.textContent = 'Selecting assignee...';
       pickerWinnerTicket.style.display = 'none';
+      if (dotMatrixLoader) dotMatrixLoader.style.display = 'grid';
 
-      let counter = 0;
-      const speed = 80;
-      const totalSteps = 25;
+      const durationMs = 6000; // Exact 6 seconds
+      const speedMs = 100;
+      const startTime = Date.now();
 
       const interval = setInterval(() => {
-        counter++;
+        const elapsedTime = Date.now() - startTime;
+
         const randomIndex = Math.floor(Math.random() * allTickets.length);
         const candidate = allTickets[randomIndex];
-        
         pickerWinnerName.textContent = candidate.name;
         pickerWinnerTicket.textContent = candidate.ticket_code;
 
-        if (counter >= totalSteps) {
+        if (elapsedTime >= durationMs) {
           clearInterval(interval);
           isSpinning = false;
           pickRandomBtn.disabled = false;
           pickerStatusText.textContent = 'TASK ASSIGNED TO';
           pickerWinnerTicket.style.display = 'inline-block';
+          if (dotMatrixLoader) dotMatrixLoader.style.display = 'none';
 
           if (typeof confetti === 'function') {
             confetti({
@@ -252,11 +251,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
           }
         }
-      }, speed);
+      }, speedMs);
     });
   }
 
-  // 5. Handle Submit Form (Assign Number & Round-Robin Group)
+  // 5. Handle Submit Form
   if (assignForm) {
     assignForm.addEventListener('submit', async (e) => {
       e.preventDefault();
